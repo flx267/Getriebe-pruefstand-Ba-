@@ -1,7 +1,3 @@
 __pycache__/
 *.pyc
 *.pyo
-last_session.json
-dist/
-build/
-*.spec

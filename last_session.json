@@ -1,0 +1,40 @@
+{
+  "prufer": "Max Mustermann",
+  "pruefnummer": "2026-056",
+  "grenzwerte": {
+    "vibration": {
+      "warn": 5.0,
+      "critical": 11.0
+    },
+    "temperature": {
+      "warn": 35.0,
+      "critical": 40.0
+    },
+    "temperature2": {
+      "warn": 35.0,
+      "critical": 40.0
+    }
+  },
+  "messzeit_limits": {
+    "max_step1_min": 2000,
+    "max_step2_sec": 3600,
+    "max_step3_sec": 3600
+  },
+  "auftragsnummer": "",
+  "messzeiten": {
+    "step1_min": 1,
+    "step2_sec": 30,
+    "step3_sec": 5
+  },
+  "parameter": {
+    "LEAK_WARN_DROP_BAR": 0.05,
+    "LEAK_CRITICAL_DROP_BAR": 0.1,
+    "LEAK_MIN_FILL_BAR": 0.4,
+    "TORQUE_PASS_NM": 495.0,
+    "TORQUE_MIN_PRESSURE_BAR": 5.9,
+    "MOTOR_RUN_RPM": 200.0,
+    "RPM1_WARN_PCT": 5.0,
+    "RPM1_CRITICAL_PCT": 10.0,
+    "CSV_INTERVAL_S": 1.0
+  }
+}
