@@ -1,0 +1,5 @@
+PyQt6>=6.6.0
+pyqtgraph>=0.13.0
+pyinstaller>=6.0.0
+minimalmodbus>=2.1.0
+openpyxl>=3.1.0
