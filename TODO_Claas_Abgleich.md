@@ -244,6 +244,15 @@ Soll-Reihenfolge laut Claas:
   **Umbau 01.10.2026 (Nutzer):** V3 umgesteckt auf I = Getriebe/DS2, II = von V4, III = Schraube
   → Halten jetzt 0/0 (`config/settings.py → LEAK_HOLD_DO6 = 0`, bei alter Belegung 1). DAQ-Monitor
   entlüftet beim Schließen zusätzlich, wenn DS2 > 0,35 bar zeigt.
+  **Kundenrückmeldung 16.11.2026:** (1) Druck fällt in den ersten 2–3 s nach dem Befüllen um
+  0,1–0,15 bar → neue Phase „Beruhigen“ (`LEAK_SETTLE_S`, 5 s) zwischen Befüllen und Halten,
+  Startdruck erst danach. (2) Getriebe blieb nach der Prüfung unter Druck (Verschlusskappen
+  flogen im Lastlauf weg) → Entlüften 5 s statt 1 s (`LEAK_VENT_STEP_S`), beide Zeiten im
+  Einstellungsdialog. Nach dem Entlüften steht der DS2-Wert im Protokoll (drucklos ≈ 0,2 bar).
+  **Offen:** Ob 1/0 physisch entlüftet, ist am Prüfstand nicht bestätigt – die Angaben oben
+  (Halten 0/0) und in `config/settings.py` (`LEAK_HOLD_DO6 = 1`) widersprechen sich. Fällt DS2
+  nicht ab: im DAQ-Monitor 1/0 und 0/0 gegen DS2 testen, Mindest-Schaltdruck der Ventile prüfen.
+  Außerdem `CYL_MAX_PRESSURE_BAR` 6,0 → 6,5 bar ohne Toleranz (Kraftprüfung brach bei knapp 6 bar ab).
 - [ ] **C3** – Motordrehzahlregelung: Claas fordert „FU-geregelt (±20 rpm)" — d.h.
   geschlossene Regelschleife mit Drehzahl-Istwert-Rückführung, nicht nur feste
   Sollfrequenz. Aktuell sendet `test_runner.py` nur `FU_TARGET_FREQ_HZ = 50.0 Hz` ohne

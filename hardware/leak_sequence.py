@@ -6,11 +6,12 @@ und vom Konsolen-Test (test_leak.py), damit alle garantiert dieselbe Schaltfolge
 
     Phase            DO5  DO6   Ende
     Befüllen          1    1    nach fill_s
+    Beruhigen         0    0*   nach settle_s (Druck pendelt sich ein, zählt noch nicht)
     Halten            0    0*   nach hold_s  (Druckabfall wird gemessen; *LEAK_HOLD_DO6)
     Entlüften         1    0    nach vent_s
     Fertig            0    0
 
-Abbruch springt immer in „Entlüften“. Früher stand davor ein Schritt 1/1 – der ist
+Der Startdruck wird erst am Ende von „Beruhigen“ erfasst. Abbruch springt immer in „Entlüften“. Früher stand davor ein Schritt 1/1 – der ist
 identisch mit Befüllen und hat nach dem Halten kurz Luft nachgefüllt (Nutzer 10.10.2026).
 Beim Phasenwechsel wird immer zuerst abgeschaltet, dann eingeschaltet (valves_for),
 damit 0/1 → 1/0 nicht kurz über 1/1 läuft.
@@ -30,6 +31,7 @@ DO6 = VALVE_CHANNEL_MAP["V4_6"]
 PHASES: list[tuple[str, str, int, int]] = [
     ("fill",  "Befüllen",    1, 1),
     # DO6 beim Halten je nach Verschlauchung von V3, siehe config/settings.py → LEAK_HOLD_DO6
+    ("settle", "Beruhigen",  0, _settings.LEAK_HOLD_DO6),
     ("hold",  "Halten",      0, _settings.LEAK_HOLD_DO6),
     ("vent",  "Entlüften",   1, 0),
     ("done",  "Fertig",      0, 0),
@@ -67,12 +69,13 @@ class LeakSequence:
     z. B. time.monotonic()) und den aktuellen Druck; zurückgegeben werden die
     Ventilzustände {DO-Kanal: Bit}, die beim Phasenwechsel zu schreiben sind."""
 
-    def __init__(self, fill_s: float, hold_s: float, vent_s: float):
-        self._durations = {"fill": fill_s, "hold": hold_s, "vent": vent_s}
+    def __init__(self, fill_s: float, hold_s: float, vent_s: float, settle_s: float = 0.0):
+        self._durations = {"fill": fill_s, "settle": settle_s, "hold": hold_s, "vent": vent_s}
         self.phase: Optional[str] = None
         self._phase_end = 0.0
-        self.p_start = math.nan
-        self.p_end = math.nan
+        self.p_start = math.nan   # Ende Beruhigen = Beginn Halten
+        self.p_end = math.nan     # Ende Halten
+        self.p_vent = math.nan    # Ende Entlüften (nur zur Kontrolle, keine Bewertung)
         self.p_last = math.nan
         self.aborted = False   # True → kein vollständiger Durchlauf, keine Bewertung
 
@@ -98,6 +101,8 @@ class LeakSequence:
             self.p_start = self.p_last
         elif self.phase == "hold":
             self.p_end = self.p_last
+        elif self.phase == "vent":
+            self.p_vent = self.p_last
         return self._enter(nxt, now)
 
     def abort(self, now: float) -> Optional[dict[int, int]]:

@@ -19,7 +19,7 @@ from PyQt6.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 import config.settings as _settings
 from config.settings import (
-    CYLINDER_MOVE_S, LEAK_VENT_STEP_S, MEASUREMENT_INTERVAL_MS, MOTOR_RAMP_S,
+    CYLINDER_MOVE_S, MEASUREMENT_INTERVAL_MS, MOTOR_RAMP_S,
     SENSOR_MAP, STEPS, TORQUE_SETTLE_S,
 )
 from core.report_writer import ReportWriter
@@ -32,6 +32,12 @@ from hardware.leak_sequence import DO6, LeakSequence, phase_name, vent_blocking
 from hardware.safety import bolt_inserted, di_violations
 
 _TICK_MS = 200
+
+
+def _vent_s() -> float:
+    """Entlüftungszeit aus den Einstellungen (zur Laufzeit lesen, siehe
+    apply_grenzwerte_to_settings); nie unter 1 s, damit 0 im Dialog das Entlüften nicht abschaltet."""
+    return max(1.0, _settings.LEAK_VENT_STEP_S)
 
 # Messschritte, die der Werker nach dem Ergebnis wiederholen kann („Erneut durchführen“)
 _REPEATABLE = ("leak", "run", "torque")
@@ -228,23 +234,25 @@ class TestRunner(QObject):
         self.aborted.emit(title, reasons)
 
     def _safe_shutdown(self) -> None:
-        """Motor aus, Leckage entlüften, oberen Zylinder einfahren. Der untere bleibt."""
+        """Motor aus, oberen Zylinder einfahren, Leckage entlüften. Der untere bleibt.
+        Zylinder zuerst: das Entlüften blockiert für die eingestellte Entlüftungszeit."""
         self._stop_workers()
         self._hw.stop_motor()
         do = self._hw.read_do()
+        if do is None or do[UP_EXT]:
+            errors = [e for e in (self._hw.write_do(UP_EXT, 0), self._hw.write_do(UP_RET, 1)) if e]
+            self.log_message.emit(f"Oberer Zylinder einfahren: {', '.join(errors) or 'OK'}")
         leak_running = self._leak is not None and self._leak.running
         if leak_running or do is None or do[DO6]:
             def write(ch: int, bit: int) -> None:
                 error = self._hw.write_do(ch, bit)
                 if error:
                     raise RuntimeError(error)
-            for err in vent_blocking(write, LEAK_VENT_STEP_S):
+            for err in vent_blocking(write, _vent_s()):
                 self.log_message.emit(f"Entlüften: {err}")
-            self.log_message.emit("Leckage-Strang entlüftet.")
-        do = self._hw.read_do()
-        if do is None or do[UP_EXT]:
-            errors = [e for e in (self._hw.write_do(UP_EXT, 0), self._hw.write_do(UP_RET, 1)) if e]
-            self.log_message.emit(f"Oberer Zylinder einfahren: {', '.join(errors) or 'OK'}")
+            p = self._hw.read("pressure")
+            self.log_message.emit("Leckage-Strang entlüftet"
+                                  + (f": DS2 {p:.3f} bar." if p is not None else "."))
 
     # ── Werker-Aktionen ───────────────────────────────────────────────────────
 
@@ -527,11 +535,12 @@ class TestRunner(QObject):
         step = STEPS[self._step]
         hold = step["hold_seconds"]
         # _settings statt direktem Import: apply_grenzwerte_to_settings() ändert den Wert zur Laufzeit
-        fill = _settings.LEAK_FILL_S
-        self._set_running(True, fill + hold + LEAK_VENT_STEP_S)
-        self._leak = LeakSequence(fill, hold, LEAK_VENT_STEP_S)
+        fill, settle, vent = _settings.LEAK_FILL_S, _settings.LEAK_SETTLE_S, _vent_s()
+        self._set_running(True, fill + settle + hold + vent)
+        self._leak = LeakSequence(fill, hold, vent, settle_s=settle)
         self._start_workers()
-        self.log_message.emit(f"Leckageprüfung gestartet: Befüllen {fill:g} s, Halten {hold:g} s.")
+        self.log_message.emit(f"Leckageprüfung gestartet: Befüllen {fill:g} s, Beruhigen {settle:g} s, "
+                              f"Halten {hold:g} s, Entlüften {vent:g} s.")
         self._write_valves(self._leak.start(time.monotonic()))
 
     def _tick_leak(self, now: float) -> None:
@@ -545,6 +554,9 @@ class TestRunner(QObject):
                 text += f"  ·  Druckabfall bisher {seq.drop_bar():.3f} bar"
             self.now_text.emit(text, "AKTIV")
             return
+        # Nur zur Kontrolle (drucklos zeigt DS2 ≈ 0,2 bar) – keine Bewertung
+        self.log_message.emit("Entlüftet: DS2 " + ("–" if math.isnan(seq.p_vent)
+                                                    else f"{seq.p_vent:.3f} bar") + ".")
         p_fill, drop = seq.p_start, seq.drop_bar()
         if math.isnan(p_fill) or p_fill < _settings.LEAK_MIN_FILL_BAR:
             shown = "–" if math.isnan(p_fill) else f"{p_fill:.3f} bar"

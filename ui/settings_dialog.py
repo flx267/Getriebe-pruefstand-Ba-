@@ -20,6 +20,8 @@ _SENSOR_ROWS = [
 # Einzelwerte in config.settings: (Attribut, Anzeige, Einheit, Nachkommastellen)
 _PARAM_ROWS = [
     ("LEAK_FILL_S",             "Leckage: Befüllzeit",              "s",   1),
+    ("LEAK_SETTLE_S",           "Leckage: Beruhigungszeit vor Messung", "s", 1),
+    ("LEAK_VENT_STEP_S",        "Leckage: Entlüftungszeit",         "s",   1),
     ("LEAK_WARN_DROP_BAR",      "Leckage: Druckabfall Warnung ab",  "bar", 3),
     ("LEAK_CRITICAL_DROP_BAR",  "Leckage: Druckabfall kritisch ab", "bar", 3),
     ("LEAK_MIN_FILL_BAR",       "Leckage: Mindest-Befülldruck",     "bar", 2),

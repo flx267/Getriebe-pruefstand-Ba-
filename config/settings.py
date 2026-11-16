@@ -134,7 +134,7 @@ PREPARE_CHECKLIST = [
 # Prüfablauf. "action" bestimmt, was core/test_runner.py im Schritt tut; "ids" sind die
 # Sensoren, die live angezeigt und ins CSV geschrieben werden.
 #   prepare  – Checkliste, dann Zylinder in Grundstellung (oben ein, unten aus)
-#   leak     – Befüllen → Halten → Entlüften (hardware/leak_sequence.py), Druckabfall
+#   leak     – Befüllen → Beruhigen → Halten → Entlüften (hardware/leak_sequence.py), Druckabfall
 #   run      – Motor mit MOTOR_RUN_RPM, Vibration/Temperatur live bewertet
 #   bolt_in  – warten, bis der Sperrbolzen steckt (DI3)
 #   torque   – oberer Zylinder aus → halten/messen → ein → unten entlasten
@@ -160,8 +160,9 @@ STEPS = [
         "hold_seconds": STEP2_DURATION_SECONDS,
         "button": "Leckageprüfung starten",
         "instruction": (
-            "Das Getriebe wird automatisch mit Druckluft befüllt, abgesperrt und der "
-            "Druckabfall über die Haltezeit gemessen. Danach wird entlüftet.\n\n"
+            "Das Getriebe wird automatisch mit Druckluft befüllt und abgesperrt. Nach "
+            "einer kurzen Beruhigungszeit wird der Druckabfall über die Haltezeit "
+            "gemessen. Danach wird entlüftet.\n\n"
             "Motor steht. Nichts zu tun außer Starten."
         ),
     },
@@ -345,14 +346,18 @@ TORQUE_SOURCE = "ds1"            # "ds1" | "nm1"
 TORQUE_PASS_NM = 495.0           # bestanden ab (Soll 500 Nm, kleine Toleranz) – Grenzwerte-Dialog
 TORQUE_SETTLE_S = 3.0            # nach dem Ausfahren warten, bevor gemittelt wird
 
-# Sicherheit: DS1 darf während der ganzen Prüfung nie über 6 bar (+ Toleranz) gehen
-# (Nutzer 01.10.2026) – sonst Sicherheitspause wie bei den Induktiv-Sensoren
-CYL_MAX_PRESSURE_BAR = 6.0
-CYL_PRESSURE_TOLERANCE_BAR = 0.1
+# Sicherheit: DS1 darf während der ganzen Prüfung nie über 6,5 bar (+ Toleranz) gehen
+# (Nutzer 01.10.2026) – sonst Sicherheitspause wie bei den Induktiv-Sensoren.
+# Kunde 16.11.2026: für 500 Nm sind knapp 6 bar nötig, Druckschwankungen lösten bei
+# 6,0 (+ 0,1) bar aus → 6,5 bar, Auslösung exakt darüber (keine Toleranz mehr).
+CYL_MAX_PRESSURE_BAR = 6.5
+CYL_PRESSURE_TOLERANCE_BAR = 0.0
 
 # ── Leckage-Prüfablauf (hardware/leak_sequence.py) ────────────────────────────
 # Schaltfolge laut Nutzer (28.09.2026), DO5/DO6:
-#   Befüllen 1/1 → Halten 0/LEAK_HOLD_DO6 → Entlüften 1/0 → Fertig 0/0
+#   Befüllen 1/1 → Beruhigen 0/LEAK_HOLD_DO6 → Halten 0/LEAK_HOLD_DO6 → Entlüften 1/0 → Fertig 0/0
+# Beruhigen = Ventilstellung wie Halten, der Druckabfall zählt aber erst danach: der Druck
+# pendelt sich nach dem Befüllen 2–3 s ein und fällt dabei um 0,1–0,15 bar (Kunde 16.11.2026).
 # Halten = 0/1: nur DO5 aus schließt das System ab, DO6 bleibt an. Mit DO6 = 0 geht die
 # Luft über das Ablassventil raus – Getriebe sofort drucklos (Nutzer 01.10.2026, auch
 # nach dem Umstecken von V3).
@@ -360,9 +365,11 @@ CYL_PRESSURE_TOLERANCE_BAR = 0.1
 # nachgefüllt und wurde entfernt (Nutzer 10.10.2026).
 LEAK_HOLD_DO6 = 1
 # Leckage-Druckregler steht auf 0,5 oder 1 bar (Nutzer 30.09.2026).
-LEAK_FILL_S      = 10.0   # Phase Befüllen (DO5+DO6)
+LEAK_FILL_S      = 10.0   # Phase Befüllen (DO5+DO6) – Grenzwerte-Dialog
+LEAK_SETTLE_S    = 5.0    # Phase Beruhigen zwischen Befüllen und Messen – Grenzwerte-Dialog
 LEAK_HOLD_S      = 60.0   # DAQ-Monitor: Phase Halten (im Prüfablauf: STEP2_DURATION_SECONDS)
-LEAK_VENT_STEP_S = 1.0    # Dauer Phase Entlüften (1/0), danach 0/0
+LEAK_VENT_STEP_S = 5.0    # Dauer Phase Entlüften (1/0), danach 0/0 – Grenzwerte-Dialog
+                          # (vorher 1 s; Kunde 16.11.2026: Getriebe blieb unter Druck)
 LEAK_WARN_DROP_BAR     = 0.05   # Platzhalter – TBD vom Kunden (Grenzwerte-Dialog)
 LEAK_CRITICAL_DROP_BAR = 0.1    # Platzhalter – TBD vom Kunden (Grenzwerte-Dialog)
 LEAK_MIN_FILL_BAR      = 0.4    # darunter am Ende des Befüllens → „kein Prüfdruck“ (KRITISCH)

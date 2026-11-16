@@ -3,7 +3,7 @@ Standalone-Testskript: fährt den kompletten Leckage-Ablauf (V3 = DO5, V4 = DO6)
 USB-4711A und zeigt Phase, Ventilzustände und den Druck DS2 live in der Konsole an.
 
 Ablauf (hardware/leak_sequence.py, DO5/DO6):
-  Befüllen 1/1 → Halten 0/LEAK_HOLD_DO6 → Entlüften 1/0 → Fertig 0/0
+  Befüllen 1/1 → Beruhigen/Halten 0/LEAK_HOLD_DO6 → Entlüften 1/0 → Fertig 0/0
 
 Aufruf:
     cd Pruefstand_Software
@@ -23,7 +23,7 @@ from Automation.BDaq.BDaqApi import BioFailed
 from Automation.BDaq.InstantAiCtrl import InstantAiCtrl
 from Automation.BDaq.InstantDoCtrl import InstantDoCtrl
 
-from config.settings import LEAK_FILL_S, LEAK_HOLD_S, LEAK_VENT_STEP_S
+from config.settings import LEAK_FILL_S, LEAK_HOLD_S, LEAK_SETTLE_S, LEAK_VENT_STEP_S
 from hardware.leak_sequence import (
     DO5, DO6, LEAK_CRITICAL_DROP_BAR, LEAK_WARN_DROP_BAR,
     LeakSequence, phase_name, rate_drop, vent_blocking,
@@ -91,7 +91,7 @@ def main() -> None:
             return math.nan, math.nan
         return data[0], _scale(data[0], *SENSOR_SCALE["pressure"])
 
-    seq = LeakSequence(args.fill, args.hold, args.vent)
+    seq = LeakSequence(args.fill, args.hold, args.vent, settle_s=LEAK_SETTLE_S)
     completed = False
     try:
         apply(seq.start(time.monotonic()))

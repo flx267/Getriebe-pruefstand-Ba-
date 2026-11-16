@@ -19,7 +19,7 @@ Schreiboperationen:
     Wegfall einer Bedingung, Lesefehler oder Schließen des Fensters.
   - NUR auf Knopfdruck: Leckage-Ventile V3 (DO5) / V4 (DO6), einzeln oder als
     kompletter Ablauf „Leckageprüfung“ (hardware/leak_sequence.py, DO5/DO6):
-    Befüllen 1/1 → Halten 0/LEAK_HOLD_DO6 → Entlüften 1/0 → Fertig 0/0.
+    Befüllen 1/1 → Beruhigen/Halten 0/LEAK_HOLD_DO6 → Entlüften 1/0 → Fertig 0/0.
     Abbruch und Schließen des Fensters fahren immer die Entlüft-Folge (nur DO6
     abschalten entlüftet nicht).
   - NUR auf Knopfdruck im Feld „Druck & Kraft“: Zylinder-Ventile V1/V2 (DO1–DO4, bistabil
@@ -536,7 +536,8 @@ class _PollWorker(QThread):
             else:
                 self._vent_s = vent_s
                 self._leak_errors = []
-                self._leak_seq = LeakSequence(fill_s, hold_s, vent_s)
+                self._leak_seq = LeakSequence(fill_s, hold_s, vent_s,
+                                              settle_s=_settings.LEAK_SETTLE_S)
                 self._apply_leak_valves(backend, self._leak_seq.start(now, vent_only))
 
         seq = self._leak_seq
@@ -1136,7 +1137,8 @@ class DaqMonitorDialog(QDialog):
         fill_s, hold_s, vent_s = (s.value() for s in self._leak_spins)
         answer = QMessageBox.question(
             self, "Leckageprüfung starten?",
-            f"Befüllen {fill_s:g} s (DO5+DO6) → Halten {hold_s:g} s (DO5=0, DO6={LEAK_HOLD_DO6}) → "
+            f"Befüllen {fill_s:g} s (DO5+DO6) → Beruhigen {_settings.LEAK_SETTLE_S:g} s → "
+            f"Halten {hold_s:g} s (DO5=0, DO6={LEAK_HOLD_DO6}) → "
             f"Entlüften {vent_s:g} s (DO5=1, DO6=0).\n\n"
             "Getriebe angeschlossen und Pneumatik bereit?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
