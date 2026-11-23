@@ -368,8 +368,9 @@ LEAK_HOLD_DO6 = 1
 LEAK_FILL_S      = 10.0   # Phase Befüllen (DO5+DO6) – Grenzwerte-Dialog
 LEAK_SETTLE_S    = 5.0    # Phase Beruhigen zwischen Befüllen und Messen – Grenzwerte-Dialog
 LEAK_HOLD_S      = 60.0   # DAQ-Monitor: Phase Halten (im Prüfablauf: STEP2_DURATION_SECONDS)
-LEAK_VENT_STEP_S = 5.0    # Dauer Phase Entlüften (1/0), danach 0/0 – Grenzwerte-Dialog
-                          # (vorher 1 s; Kunde 16.11.2026: Getriebe blieb unter Druck)
+LEAK_VENT_STEP_S = 20.0   # Dauer Phase Entlüften (1/0), danach 0/0 – Grenzwerte-Dialog
+                          # (vorher 1 s, dann 5 s; Kunde 16.11.2026: Getriebe blieb unter Druck;
+                          # 23.11.2026 auf 20 s verlängert)
 LEAK_WARN_DROP_BAR     = 0.05   # Platzhalter – TBD vom Kunden (Grenzwerte-Dialog)
 LEAK_CRITICAL_DROP_BAR = 0.1    # Platzhalter – TBD vom Kunden (Grenzwerte-Dialog)
 LEAK_MIN_FILL_BAR      = 0.4    # darunter am Ende des Befüllens → „kein Prüfdruck“ (KRITISCH)
